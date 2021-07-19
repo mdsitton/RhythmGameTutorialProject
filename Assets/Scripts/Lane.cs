@@ -1,4 +1,4 @@
-﻿using Melanchall.DryWetMidi.Interaction;
+using Melanchall.DryWetMidi.Interaction;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ public class Lane : MonoBehaviour
     public Melanchall.DryWetMidi.MusicTheory.NoteName noteRestriction;
     public KeyCode input;
     public GameObject notePrefab;
+    public int laneId;
     List<Note> notes = new List<Note>();
     public List<double> timeStamps = new List<double>();
 
@@ -19,6 +20,18 @@ public class Lane : MonoBehaviour
     void Start()
     {
         
+    }
+    public void SetTimeStamps(double[] array)
+    {
+        int i = 0;
+        foreach (var note in array)
+        {
+            if ((i % 4) == laneId)
+            {
+                timeStamps.Add(note);
+            }
+            i +=1;
+        }
     }
     
     public void SetTimeStamps(Melanchall.DryWetMidi.Interaction.Note[] array)
@@ -32,6 +45,7 @@ public class Lane : MonoBehaviour
             }
         }
     }
+
     // Update is called once per frame
     void Update()
     {

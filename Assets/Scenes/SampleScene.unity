@@ -792,6 +792,7 @@ MonoBehaviour:
   noteRestriction: 11
   input: 275
   notePrefab: {fileID: 1534850418514208906, guid: 9043eb2d71628404d9dfdc92d43fc48c, type: 3}
+  laneId: 3
   timeStamps: []
 --- !u!4 &633316278
 Transform:
@@ -839,6 +840,7 @@ MonoBehaviour:
   noteRestriction: 9
   input: 274
   notePrefab: {fileID: 6401272534080061571, guid: a043c4f729c0ef1429ea13081611a298, type: 3}
+  laneId: 2
   timeStamps: []
 --- !u!4 &1441840088
 Transform:
@@ -893,6 +895,7 @@ MonoBehaviour:
   - {fileID: 633316277}
   songDelayInSeconds: 0
   marginOfError: 0.07
+  generateAudio: 1
   inputDelayInMilliseconds: 0
   timeManager: {fileID: 1787680575}
   fileLocation: we_made_a_chart_pog.mid
@@ -1054,6 +1057,7 @@ MonoBehaviour:
   noteRestriction: 7
   input: 273
   notePrefab: {fileID: 4003208864679534659, guid: b93f007ca30546343b6fb9f22a218a42, type: 3}
+  laneId: 1
   timeStamps: []
 --- !u!4 &1856990797
 Transform:
@@ -1101,6 +1105,7 @@ MonoBehaviour:
   noteRestriction: 5
   input: 276
   notePrefab: {fileID: 1679635116095923819, guid: cc28a87238983584da68d44f3dd25845, type: 3}
+  laneId: 0
   timeStamps: []
 --- !u!4 &2073587299
 Transform:

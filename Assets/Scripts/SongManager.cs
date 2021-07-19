@@ -15,6 +15,8 @@ public class SongManager : MonoBehaviour
     public float songDelayInSeconds;
     public double marginOfError; // in seconds
 
+    public bool generateAudio;
+
     public int inputDelayInMilliseconds;
 
     public TimeManager timeManager;
@@ -36,13 +38,25 @@ public class SongManager : MonoBehaviour
     void Start()
     {
         Instance = this;
-        if (Application.streamingAssetsPath.StartsWith("http://") || Application.streamingAssetsPath.StartsWith("https://"))
+        if (generateAudio)
         {
-            StartCoroutine(ReadFromWebsite());
+            List<double> times = CustomAudioGenerator.GenerateNoteTimes();
+            float[] audioSamples = CustomAudioGenerator.GenerateAudio(times);
+
+            audioSource.clip = AudioClip.Create("beep track", audioSamples.Length, CustomAudioGenerator.channels, CustomAudioGenerator.sampleRate, false);
+            audioSource.clip.SetData(audioSamples, 0);
+            GetDataFromMidi(times);
         }
         else
         {
-            ReadFromFile();
+            if (Application.streamingAssetsPath.StartsWith("http://") || Application.streamingAssetsPath.StartsWith("https://"))
+            {
+                StartCoroutine(ReadFromWebsite());
+            }
+            else
+            {
+                ReadFromFile();
+            }
         }
     }
 
@@ -72,6 +86,18 @@ public class SongManager : MonoBehaviour
     {
         midiFile = MidiFile.Read(Application.streamingAssetsPath + "/" + fileLocation);
         GetDataFromMidi();
+    }
+
+    public void GetDataFromMidi(List<double> notes)
+    {
+        double[] array = notes.ToArray();
+
+        foreach (var lane in lanes)
+        {
+            lane.SetTimeStamps(array);
+        }
+
+        Invoke(nameof(StartSong), songDelayInSeconds);
     }
 
     public void GetDataFromMidi()
