@@ -117,7 +117,6 @@ public class TimeManager : MonoBehaviour
         ProcessAudioTime();
         currentFrameTime = lastFrameTime = Time.timeAsDouble;
         firstDspTime = lastDspTime = AudioSettings.dspTime;
-        Application.targetFrameRate = 60;
     }
 
     private double lastDspTime;
@@ -127,7 +126,7 @@ public class TimeManager : MonoBehaviour
     private bool gameThreadLatencyAck = false;
     private double audioThreadTimeLatencyAck;
 
-    // This is used to get the exact time that the next audio buffer is switched to
+    // This is used to schedule the audio playback and get the exact start time of audio to calculate latency, runs from the audio thread
     void OnAudioFilterRead(float[] data, int channels)
     {
         // Calculate the update period of the audio thread, basically how much time between calls
@@ -156,7 +155,7 @@ public class TimeManager : MonoBehaviour
 
     public double GetCurrentAudioTime()
     {
-        return currentTime; //(currentTime - audioStartTime) + sourceStartTime;
+        return currentTime;
     }
 
     private double audioGametimeOffset = 0.0f;
