@@ -20,6 +20,7 @@ public class Lane : MonoBehaviour
     {
         
     }
+    
     public void SetTimeStamps(Melanchall.DryWetMidi.Interaction.Note[] array)
     {
         foreach (var note in array)
