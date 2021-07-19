@@ -109,6 +109,5 @@ public class TimeManager : MonoBehaviour
             musicSource.PlayScheduled(playTime); 
             audioHasBeenScheduled = true;
         }
-        Debug.Log($"{musicSource.time} {musicSource.isPlaying} {GetCurrentAudioTime()}");
     }
 }
