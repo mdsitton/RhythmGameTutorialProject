@@ -35,6 +35,12 @@ public class Lane : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Skip update unless the song is actual playing
+        if (!SongManager.Instance.timeManager.IsPlaying())
+        {
+            return;
+        }
+
         if (spawnIndex < timeStamps.Count)
         {
             if (SongManager.GetAudioSourceTime() >= timeStamps[spawnIndex] - SongManager.Instance.noteTime)
@@ -52,26 +58,33 @@ public class Lane : MonoBehaviour
             double marginOfError = SongManager.Instance.marginOfError;
             double audioTime = SongManager.GetAudioSourceTime() - (SongManager.Instance.inputDelayInMilliseconds / 1000.0);
 
-            if (Input.GetKeyDown(input))
+            // Simple bot
+            if (audioTime - timeStamp > 0)
             {
-                if (Math.Abs(audioTime - timeStamp) < marginOfError)
-                {
-                    Hit();
-                    print($"Hit on {inputIndex} note");
-                    Destroy(notes[inputIndex].gameObject);
-                    inputIndex++;
-                }
-                else
-                {
-                    print($"Hit inaccurate on {inputIndex} note with {Math.Abs(audioTime - timeStamp)} delay");
-                }
-            }
-            if (timeStamp + marginOfError <= audioTime)
-            {
-                Miss();
-                print($"Missed {inputIndex} note");
+                Hit();
+                Destroy(notes[inputIndex].gameObject);
                 inputIndex++;
             }
+
+            // if (Input.GetKeyDown(input))
+            // {
+            //     if (Math.Abs(audioTime - timeStamp) < marginOfError)
+            //     {
+            //         Hit();
+            //         print($"Hit on {inputIndex} note");
+            //         Destroy(notes[inputIndex].gameObject);
+            //     }
+            //     else
+            //     {
+            //         print($"Hit inaccurate on {inputIndex} note with {Math.Abs(audioTime - timeStamp)} delay");
+            //     }
+            // }
+            // if (timeStamp + marginOfError <= audioTime)
+            // {
+            //     Miss();
+            //     print($"Missed {inputIndex} note");
+            //     inputIndex++;
+            // }
         }       
     
     }

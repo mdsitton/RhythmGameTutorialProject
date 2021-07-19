@@ -17,8 +17,7 @@ public class SongManager : MonoBehaviour
 
     public int inputDelayInMilliseconds;
 
-    [SerializeField]
-    TimeManager timeManager;
+    public TimeManager timeManager;
 
     public string fileLocation;
     public float noteTime;
@@ -96,7 +95,7 @@ public class SongManager : MonoBehaviour
 
     public static double GetAudioSourceTime()
     {
-        // return (double)Instance.audioSource.timeSamples / Instance.audioSource.clip.frequency;
         return (double)Instance.timeManager.GetCurrentAudioTime();
+        // return (double)Instance.audioSource.timeSamples / Instance.audioSource.clip.frequency;
     }
 }
