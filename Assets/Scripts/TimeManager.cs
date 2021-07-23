@@ -32,6 +32,9 @@ public class TimeManager : MonoBehaviour
     private double lastTime;
 
     [SerializeField]
+    private double preStartTime = 1;
+
+    [SerializeField]
     private AudioSource musicSource;
 
     double systemUnityTimeOffset;
@@ -106,7 +109,7 @@ public class TimeManager : MonoBehaviour
         if (audioStartTime > 0)
         {
             // This is for measuring the time offset after the song start has been scheduled and getting the exact latency offset since the start of audio playback
-            if (currentTime == 0)
+            if (currentTime >= 0)
             {
                 currentTime = (unityTime - audioStartTime)+sourceStartTime;
             }
@@ -114,6 +117,10 @@ public class TimeManager : MonoBehaviour
             {
                 currentTime += doubleDelta;
             }
+        }
+        else if (currentTime < 0)
+        {
+                currentTime += doubleDelta;
         }
 
     }
@@ -133,6 +140,7 @@ public class TimeManager : MonoBehaviour
 
     public void Start()
     {
+        currentTime = -preStartTime;
         sourceStartTime = 0;
         ProcessAudioTime();
         currentFrameTime = lastFrameTime = Time.timeAsDouble;
@@ -191,6 +199,11 @@ public class TimeManager : MonoBehaviour
         return musicSource.isPlaying;
     }
 
+    public void StartTime(double time)
+    {
+        sourceStartTime = time;
+    }
+
     public void Play()
     {
         isPlaying = true;
@@ -219,11 +232,14 @@ public class TimeManager : MonoBehaviour
         if (isPlaying && dspUpdatePeriod != 0 && lastDspUpdatePeriod == dspUpdatePeriod && !audioHasBeenScheduled)
         {
             // Play 2 update periods in the future
-            double playTime = AudioSettings.dspTime+(dspUpdatePeriod*2);
+            double playOffset = ((int)(preStartTime/dspUpdatePeriod))*dspUpdatePeriod;
+            currentTime = -playOffset;
+            double playTime = AudioSettings.dspTime+playOffset;
             audioDspScheduledTime = playTime;
             musicSource.time = (float)sourceStartTime;
             musicSource.PlayScheduled(playTime); 
             audioHasBeenScheduled = true;
         }
+        Debug.Log(currentTime);
     }
 }

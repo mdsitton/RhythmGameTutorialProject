@@ -33,7 +33,7 @@ public class CustomAudioGenerator
 
         double time = measureLength;
 
-        for (int i = 0; i < 16; ++i)
+        for (int i = 0; i < 128; ++i)
         {
             var notesPerMeasure = 4;
 
