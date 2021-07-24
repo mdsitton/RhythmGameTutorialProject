@@ -46,9 +46,12 @@ public class TimeManager : MonoBehaviour
     double syncDelta;
 
     double syncSpeedupRate;
-    
+
     public void ProcessAudioTime()
     {
+
+
+#if !UNITY_WEBGL
         // Measure the time offset between unity realtimeSinceStartup and System.Diags stopwatch time
         // This is used for offsetting when checking time from the audio thread to match unity time
         var systemTime = GetTimeImpl();
@@ -59,7 +62,6 @@ public class TimeManager : MonoBehaviour
         lastFrameTime = currentFrameTime;
         currentFrameTime = Time.timeAsDouble;
         var doubleDelta = currentFrameTime - lastFrameTime;
-
         // You could consider this the audio thread "pinging" the game thread.
         // This calculates the latency between when the audio thread was ran and when the game thread runs
         // and if the game thread is greater than dspUpdatePeriod (the update period between calls of the audio thread)
@@ -72,7 +74,7 @@ public class TimeManager : MonoBehaviour
             if (syncDelta > dspUpdatePeriod)
             {
                 // Calculate a more accurate sync delta from the realtime value
-                var syncDeltaAccurate = ((unityTime - audioStartTime)+sourceStartTime) - currentTime;
+                var syncDeltaAccurate = ((unityTime - audioStartTime) + sourceStartTime) - currentTime;
 
                 // If syncDeltaAccurate is more than 100ms off use the original value.
                 // This likely means the editor was paused and resumed, in this case check time source and sync to that
@@ -105,13 +107,17 @@ public class TimeManager : MonoBehaviour
             syncSpeedupRate = 0.0;
             gameThreadStall = false;
         }
+#endif
 
+#if UNITY_WEBGL
+        currentTime = audioDspScheduledTime == 0.0 ? -preStartTime : AudioSettings.dspTime - audioDspScheduledTime; ;
+#else
         if (audioStartTime > 0)
         {
             // This is for measuring the time offset after the song start has been scheduled and getting the exact latency offset since the start of audio playback
             if (currentTime >= 0)
             {
-                currentTime = (unityTime - audioStartTime)+sourceStartTime;
+                currentTime = (unityTime - audioStartTime) + sourceStartTime;
             }
             else
             {
@@ -120,22 +126,9 @@ public class TimeManager : MonoBehaviour
         }
         else if (currentTime < 0)
         {
-                currentTime += doubleDelta;
+            currentTime += doubleDelta;
         }
-
-    }
-
-    private double GetTimeImpl()
-    {
-        return (System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
-    }
-
-    // Using this because it's threadsafe and unity's Time api is not
-    // This is being translated into the same starting position as Time.realtimeSinceStartupAsDouble
-    // And the offset is measured at the start of each frame to compensate for any drift
-    private double GetTime()
-    {
-        return GetTimeImpl() - systemUnityTimeOffset;
+#endif
     }
 
     public void Start()
@@ -151,8 +144,24 @@ public class TimeManager : MonoBehaviour
     private double dspUpdatePeriod;
     private double lastDspUpdatePeriod;
 
+
+#if !UNITY_WEBGL
+
     private bool gameThreadLatencyAck = false;
     private double audioThreadTimeLatencyAck;
+
+    private double GetTimeImpl()
+    {
+        return (System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
+    }
+
+    // Using this because it's threadsafe and unity's Time api is not
+    // This is being translated into the same starting position as Time.realtimeSinceStartupAsDouble
+    // And the offset is measured at the start of each frame to compensate for any drift
+    private double GetTime()
+    {
+        return GetTimeImpl() - systemUnityTimeOffset;
+    }
 
     // This is used to schedule the audio playback and get the exact start time of audio to calculate latency, runs from the audio thread
     void OnAudioFilterRead(float[] data, int channels)
@@ -180,6 +189,7 @@ public class TimeManager : MonoBehaviour
             audioThreadTimeLatencyAck = GetTime();
         }
     }
+#endif
 
     public double GetCurrentAudioTime()
     {
@@ -225,21 +235,36 @@ public class TimeManager : MonoBehaviour
     void Update()
     {
         ProcessAudioTime();
-    
         // The following is the playback scheduling system, this Schedules the audio to start at the begining of the next
         // Audio thread invoke time so we know exactly when the audio thread should begin playing the audio for latency calulation
         // Make sure that the dspUpdatePeriod caculation has been found before scheduling playback
+        // WebGL just schedules it at the correct offset in the future based on the pre start time
+#if UNITY_WEBGL
+        if (isPlaying && !audioHasBeenScheduled)
+        {
+
+            // Play 2 update periods in the future
+            double playOffset = preStartTime;
+            currentTime = -playOffset;
+            audioDspScheduledTime = AudioSettings.dspTime + playOffset;
+            musicSource.time = (float)sourceStartTime;
+            musicSource.PlayScheduled(audioDspScheduledTime);
+            audioHasBeenScheduled = true;
+            // Debug.Log($"Audio Scheduled Current: {AudioSettings.dspTime} PlayTime: {audioDspScheduledTime}");
+        }
+#else
         if (isPlaying && dspUpdatePeriod != 0 && lastDspUpdatePeriod == dspUpdatePeriod && !audioHasBeenScheduled)
         {
+
             // Play 2 update periods in the future
-            double playOffset = ((int)(preStartTime/dspUpdatePeriod))*dspUpdatePeriod;
+            double playOffset = ((int)(preStartTime / dspUpdatePeriod)) * dspUpdatePeriod;
             currentTime = -playOffset;
-            double playTime = AudioSettings.dspTime+playOffset;
+            double playTime = AudioSettings.dspTime + playOffset;
             audioDspScheduledTime = playTime;
             musicSource.time = (float)sourceStartTime;
-            musicSource.PlayScheduled(playTime); 
+            musicSource.PlayScheduled(playTime);
             audioHasBeenScheduled = true;
         }
-        Debug.Log(currentTime);
+#endif
     }
 }
