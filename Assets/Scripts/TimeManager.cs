@@ -110,7 +110,7 @@ public class TimeManager : MonoBehaviour
 #endif
 
 #if UNITY_WEBGL
-        currentTime = audioDspScheduledTime == 0.0 ? -preStartTime : AudioSettings.dspTime - audioDspScheduledTime; ;
+        currentTime = audioDspScheduledTime == 0.0 ? -preStartTime : AudioSettings.dspTime - audioDspScheduledTime;
 #else
         if (audioStartTime > 0)
         {
@@ -131,6 +131,8 @@ public class TimeManager : MonoBehaviour
 #endif
     }
 
+    public double bufferLatency;
+
     public void Start()
     {
         currentTime = -preStartTime;
@@ -138,6 +140,8 @@ public class TimeManager : MonoBehaviour
         ProcessAudioTime();
         currentFrameTime = lastFrameTime = Time.timeAsDouble;
         firstDspTime = lastDspTime = AudioSettings.dspTime;
+        AudioSettings.GetDSPBufferSize(out int bufferLength, out int numBuffers);
+        bufferLatency = ((double)bufferLength * numBuffers) / AudioSettings.outputSampleRate;
     }
 
     private double lastDspTime;
@@ -193,7 +197,7 @@ public class TimeManager : MonoBehaviour
 
     public double GetCurrentAudioTime()
     {
-        return currentTime;
+        return currentTime - bufferLatency;
     }
 
     private double audioGametimeOffset = 0.0f;
