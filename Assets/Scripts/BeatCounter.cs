@@ -18,7 +18,7 @@ public class BeatCounter : MonoBehaviour
 
     private void Update()
     {
-        if(!manager.IsPlaying()) return;
+        if (!manager.IsPlaying()) return;
 
         if (Math.Abs(manager.GetCurrentAudioTime() % beatInterval) < beatTolerance)
         {
@@ -33,8 +33,8 @@ public class BeatCounter : MonoBehaviour
 
     private void OnGUI()
     {
-        if(manager.IsPlaying()) return;
-        
+        if (manager.IsPlaying()) return;
+
         if (GUILayout.Button("Start", GUILayout.Height(70), GUILayout.Width(200)))
         {
             manager.Play();
