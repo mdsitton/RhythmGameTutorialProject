@@ -47,16 +47,25 @@ public class TimeManager : MonoBehaviour
 
     double syncSpeedupRate;
 
+    double currentSystemTime;
+    double currentUnityTime;
+
+    public double UnityRealtimeToSongTime(double time)
+    {
+        // calculate time offset relative to current frame's realtimeSinceStartup
+        // then offset the current audio time to get the correct song time
+        return GetCurrentAudioTime() + (currentUnityTime - time);
+    }
+    private bool initialTimeSet = false;
     public void ProcessAudioTime()
     {
-
-
-#if !UNITY_WEBGL
         // Measure the time offset between unity realtimeSinceStartup and System.Diags stopwatch time
         // This is used for offsetting when checking time from the audio thread to match unity time
-        var systemTime = GetTimeImpl();
-        var unityTime = Time.realtimeSinceStartupAsDouble;
-        systemUnityTimeOffset = systemTime - unityTime;
+        currentSystemTime = GetTimeImpl();
+        currentUnityTime = Time.realtimeSinceStartupAsDouble;
+        systemUnityTimeOffset = currentSystemTime - currentUnityTime;
+
+#if !UNITY_WEBGL
 
         // Using Time.timeAsDouble to calculate Time.deltaTime as a double since unity doesn't have an api for this
         lastFrameTime = currentFrameTime;
@@ -74,7 +83,7 @@ public class TimeManager : MonoBehaviour
             if (syncDelta > dspUpdatePeriod)
             {
                 // Calculate a more accurate sync delta from the realtime value
-                var syncDeltaAccurate = ((unityTime - audioStartTime) + sourceStartTime) - currentTime;
+                var syncDeltaAccurate = ((currentUnityTime - audioStartTime) + sourceStartTime) - currentTime;
 
                 // If syncDeltaAccurate is more than 100ms off use the original value.
                 // This likely means the editor was paused and resumed, in this case check time source and sync to that
@@ -110,14 +119,15 @@ public class TimeManager : MonoBehaviour
 #endif
 
 #if UNITY_WEBGL
-        currentTime = audioDspScheduledTime == 0.0 ? -preStartTime : AudioSettings.dspTime - audioDspScheduledTime;
+        currentTime = (audioDspScheduledTime == 0.0 ? -preStartTime : AudioSettings.dspTime - audioDspScheduledTime) + sourceStartTime;
 #else
         if (audioStartTime > 0)
         {
             // This is for measuring the time offset after the song start has been scheduled and getting the exact latency offset since the start of audio playback
-            if (currentTime >= 0)
+            if (currentTime >= 0 && !initialTimeSet)
             {
-                currentTime = (unityTime - audioStartTime) + sourceStartTime;
+                initialTimeSet = true;
+                currentTime = (currentUnityTime - audioStartTime) + sourceStartTime;
             }
             else
             {
@@ -149,15 +159,15 @@ public class TimeManager : MonoBehaviour
     private double lastDspUpdatePeriod;
 
 
-#if !UNITY_WEBGL
-
-    private bool gameThreadLatencyAck = false;
-    private double audioThreadTimeLatencyAck;
-
     private double GetTimeImpl()
     {
         return (System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency);
     }
+
+#if !UNITY_WEBGL
+
+    private bool gameThreadLatencyAck = false;
+    private double audioThreadTimeLatencyAck;
 
     // Using this because it's threadsafe and unity's Time api is not
     // This is being translated into the same starting position as Time.realtimeSinceStartupAsDouble
@@ -197,6 +207,8 @@ public class TimeManager : MonoBehaviour
 
     public double GetCurrentAudioTime()
     {
+        if (!audioHasBeenScheduled)
+            return 0;
         return currentTime - bufferLatency;
     }
 
@@ -207,10 +219,16 @@ public class TimeManager : MonoBehaviour
     double audioDspScheduledTime;
 
     bool isPlaying = false;
+    bool isPaused = false;
 
     public bool IsPlaying()
     {
         return musicSource.isPlaying;
+    }
+
+    public bool IsPaused()
+    {
+        return isPaused;
     }
 
     public void StartTime(double time)
@@ -221,15 +239,22 @@ public class TimeManager : MonoBehaviour
     public void Play()
     {
         isPlaying = true;
+        isPaused = false;
     }
 
     private double sourceStartTime;
 
+    public double GetMusicLength()
+    {
+        return musicSource.clip == null ? float.MaxValue : Mathf.Max(0.01f, musicSource.clip.length);
+    }
+
     public void Pause()
     {
-        sourceStartTime = GetCurrentAudioTime();
+        sourceStartTime = musicSource.time;
         musicSource.Stop();
         isPlaying = false;
+        isPaused = true;
         audioStartTime = 0;
         currentTime = 0;
         audioHasBeenScheduled = false;
@@ -249,12 +274,14 @@ public class TimeManager : MonoBehaviour
 
             // Play 2 update periods in the future
             double playOffset = preStartTime;
-            currentTime = -playOffset;
-            audioDspScheduledTime = AudioSettings.dspTime + playOffset;
+
+            currentTime = -playOffset + sourceStartTime;
             musicSource.time = (float)sourceStartTime;
+
+            audioDspScheduledTime = AudioSettings.dspTime + playOffset;
             musicSource.PlayScheduled(audioDspScheduledTime);
+
             audioHasBeenScheduled = true;
-            // Debug.Log($"Audio Scheduled Current: {AudioSettings.dspTime} PlayTime: {audioDspScheduledTime}");
         }
 #else
         if (isPlaying && dspUpdatePeriod != 0 && lastDspUpdatePeriod == dspUpdatePeriod && !audioHasBeenScheduled)
@@ -262,11 +289,13 @@ public class TimeManager : MonoBehaviour
 
             // Play 2 update periods in the future
             double playOffset = ((int)(preStartTime / dspUpdatePeriod)) * dspUpdatePeriod;
-            currentTime = -playOffset;
-            double playTime = AudioSettings.dspTime + playOffset;
-            audioDspScheduledTime = playTime;
+
+            currentTime = -playOffset + sourceStartTime;
             musicSource.time = (float)sourceStartTime;
-            musicSource.PlayScheduled(playTime);
+
+            audioDspScheduledTime = AudioSettings.dspTime + playOffset;
+            musicSource.PlayScheduled(audioDspScheduledTime);
+
             audioHasBeenScheduled = true;
         }
 #endif
